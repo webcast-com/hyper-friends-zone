@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User } from '@supabase/supabase-js';
-import { supabase, Profile } from '../lib/supabase';
+import { supabase, isDemoMode, DEMO_PROFILE, Profile } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -13,12 +13,32 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const DEMO_USER = {
+  id: DEMO_PROFILE.id,
+  email: 'demo@hyperfriends.zone',
+  app_metadata: {},
+  user_metadata: {},
+  aud: 'authenticated',
+  created_at: new Date().toISOString(),
+  role: 'authenticated',
+  updated_at: new Date().toISOString(),
+} as unknown as User;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (isDemoMode) {
+      const timer = setTimeout(() => {
+        setUser(DEMO_USER);
+        setProfile(DEMO_PROFILE);
+        setLoading(false);
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -61,36 +81,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, username: string, fullName: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    if (isDemoMode) {
+      const demoProfile: Profile = { ...DEMO_PROFILE, username, full_name: fullName };
+      setUser(DEMO_USER);
+      setProfile(demoProfile);
+      return;
+    }
 
+    const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
 
     if (data.user) {
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert({
-          id: data.user.id,
-          username,
-          full_name: fullName,
-        });
+        .insert({ id: data.user.id, username, full_name: fullName });
 
       if (profileError) throw profileError;
+      await loadProfile(data.user.id);
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    if (isDemoMode) {
+      setUser(DEMO_USER);
+      setProfile(DEMO_PROFILE);
+      return;
+    }
 
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
   };
 
   const signOut = async () => {
+    if (isDemoMode) {
+      setUser(null);
+      setProfile(null);
+      return;
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };

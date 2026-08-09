@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { supabase, Post as PostType } from '../lib/supabase';
 import Post from './Post';
 import CreatePost from './CreatePost';
+import StoriesBar from './StoriesBar';
 
 export default function Feed() {
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadPosts();
@@ -13,6 +15,7 @@ export default function Feed() {
 
   const loadPosts = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data, error } = await supabase
         .from('posts')
@@ -21,8 +24,9 @@ export default function Feed() {
 
       if (error) throw error;
       setPosts(data || []);
-    } catch (error) {
-      console.error('Error loading posts:', error);
+    } catch (err: any) {
+      console.error('Error loading posts:', err);
+      setError(err.message || 'Failed to load posts');
     } finally {
       setLoading(false);
     }
@@ -30,7 +34,15 @@ export default function Feed() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      <StoriesBar />
       <CreatePost onPostCreated={loadPosts} />
+
+      {error && (
+        <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-6">
+          <p className="font-medium">Error loading posts</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12">

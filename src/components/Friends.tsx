@@ -69,7 +69,7 @@ export default function Friends() {
       .select('following_id, profiles!follows_following_id_fkey(*)')
       .eq('follower_id', user.id);
 
-    setFollowing(data?.map(f => f.profiles).filter(Boolean) as Profile[] || []);
+    setFollowing((data?.map(f => f.profiles).filter(Boolean) as unknown as Profile[]) || []);
   };
 
   const loadFriends = async () => {
@@ -82,7 +82,6 @@ export default function Friends() {
       .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`);
 
     if (data) {
-      const friendProfiles: Profile[] = [];
       const ids = new Set<string>();
 
       data.forEach(friendship => {
@@ -95,7 +94,7 @@ export default function Friends() {
         .select('*')
         .in('id', Array.from(ids));
 
-      setFriends(profiles || []);
+      setFriends((profiles as unknown as Profile[]) || []);
       setFriendIds(ids);
     }
   };
