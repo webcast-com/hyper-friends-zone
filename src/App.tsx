@@ -1,13 +1,25 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { isDemoMode } from './lib/supabase';
 import Auth from './components/Auth';
 import Feed from './components/Feed';
 import Friends from './components/Friends';
-import { Home, Users, User, LogOut } from 'lucide-react';
+import { Home, Users, User, LogOut, Beaker } from 'lucide-react';
 
 function MainApp() {
   const [activeTab, setActiveTab] = useState<'feed' | 'friends' | 'profile'>('feed');
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user || !profile) {
     return <Auth />;
@@ -15,6 +27,12 @@ function MainApp() {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {isDemoMode && (
+        <div className="bg-amber-500 text-white text-center py-2 px-4 text-sm font-medium flex items-center justify-center gap-2">
+          <Beaker size={16} />
+          Demo Mode — Set VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY in .env to connect to Supabase
+        </div>
+      )}
       <nav className="bg-white shadow-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-16">
